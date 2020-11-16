@@ -21,9 +21,12 @@ spec:
         args:
         - "--config.file=/etc/prometheus/prometheus.yml"
         - "--storage.tsdb.path=/prometheus"
+        - "--storage.tsdb.no-lockfile"
         - "--storage.tsdb.retention=1d"
         - "--web.enable-admin-api"
         - "--web.enable-lifecycle"
+        - "--log.level=error"
+        - "--log.format=json"
         ports:
         - containerPort: 9090
           protocol: TCP
