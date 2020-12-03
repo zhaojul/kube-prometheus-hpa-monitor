@@ -29,7 +29,7 @@ How to depoy it:
 We still need to perform the steps of deploying prometheus above, and perform the following steps after completion:
 
 ```
-make certs
+make certs  #create secret
 kubectl apply -f ./custom-metrics-api/
 ```
 
@@ -54,7 +54,6 @@ The prometheus pod is already running in the k8s cluster, and external access is
         - k8s1-node2-ip:30090
         labels:
           k8scluster: noprod-cluster
-          environment: 'non-production'
           resourcetype: 'azure-paas'
           department: 'BU1'
       - targets:
@@ -63,7 +62,6 @@ The prometheus pod is already running in the k8s cluster, and external access is
         labels:
           k8scluster: prod-cluster
           environment: 'production'
-          resourcetype: 'azure-paas'
           department: 'BU1'
       ...
 ```
