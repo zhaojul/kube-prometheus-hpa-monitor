@@ -1,0 +1,51 @@
+groups:
+- name: ZookeeperAlert
+  rules:
+  - alert: Zookeeper stacking requests are too large
+    expr: avg(zk_outstanding_requests) by (instance) > 10
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Instance {{ $labels.instance }} "
+      description: "zk:{{ $labels.zookeeper }} node:{{ $labels.instance }} stacking requests are too large"
+  - alert: Too many syncs in blocking
+    expr: avg(zk_pending_syncs) by (instance) > 10
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Instance {{ $labels.instance }} "
+      description: "zk:{{ $labels.zookeeper }} node:{{ $labels.instance }} too many syncs in blocking"
+  - alert: Average response delay is too high
+    expr: avg(zk_avg_latency) by (instance) > 10
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Instance {{ $labels.instance }} "
+      description: "zk:{{ $labels.zookeeper }}node:{{ $labels.instance }} average response delay is too high"
+  - alert: The number of open file descriptors is greater than the size set by the system
+    expr: zk_open_file_descriptor_count > zk_max_file_descriptor_count * 0.85
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Instance {{ $labels.instance }} "
+      description: "zk:{{ $labels.zookeeper }} node:{{ $labels.instance }} the number of open file descriptors is greater than the size set by the system"
+  - alert: ZookeeperDown
+    expr: zk_up == 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Instance {{ $labels.instance }} "
+      description: "zk:{{ $labels.zookeeper }}node:{{ $labels.instance }} down!"
+  - alert: ZeekpeerLostMaster
+    expr: absent(zk_server_state{state="leader"})  != 1
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Instance {{ $labels.instance }} "
+      description: "zk:{{ $labels.zookeeper }} lost master node!"
