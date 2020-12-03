@@ -1,0 +1,67 @@
+groups:
+- name: HostAlert
+  rules:
+  - alert: Host Cpu Usage Alert
+    expr: 100 - ((avg by (instance,job,env)(irate(node_cpu_seconds_total{mode="idle"}[2m]))) *100) > 85
+    for: 1m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Instance {{ $labels.instance }} CPU usgae high"
+      description: "BU: {{ $labels.department }} ENV: {{ $labels.environment }} CLUSTER: {{ $labels.clustername }} HOST: {{ $labels.instance }} CPU usage above 85% (current value: {{ $value }})"
+  - alert: Host Mem Usage Alert
+    expr: ((node_memory_MemTotal_bytes - node_memory_MemFree_bytes - node_memory_Buffers_bytes - node_memory_Cached_bytes) / (node_memory_MemTotal_bytes )) * 100 > 90
+    for: 1m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Instance {{ $labels.instance }} MEM usgae high"
+      description: "BU: {{ $labels.department }} ENV: {{ $labels.environment }} CLUSTER: {{ $labels.clustername }} HOST: {{ $labels.instance }}  MEM usage above 90% (current value: {{ $value }})"
+  - alert: Node Filesystem Usage
+    expr: 100 - ((node_filesystem_avail_bytes{job="node-exporter",mountpoint=~".*",fstype=~"ext4|xfs|ext2|ext3"} * 100) / node_filesystem_size_bytes {job="node-exporter",mountpoint=~".*",fstype=~"ext4|xfs|ext2|ext3"}) > 85
+    for: 1m
+    labels:
+      severity: warning
+    annotations:
+      summary: "{{$labels.instance}}: High Filesystem usage detected"
+      description: "BU: {{ $labels.department }} ENV: {{ $labels.environment }} CLUSTER: {{ $labels.clustername }} HOST: {{ $labels.instance }} MOUNTPOINT: {{ $labels.mountpoint }} DEVICE: {{ $labels.device }} Filesystem usage is above 85% (current value is: {{ $value }})"
+  - alert: Instance Down
+    expr: up{job!="kubernetes-pods"} == 0
+    for: 1m
+    labels:
+      severity: critital
+    annotations:
+      summary: "Instance {{ $labels.instance }} down"
+      description: "BU: {{ $labels.department }} ENV: {{ $labels.environment }} CLUSTER: {{ $labels.clustername }} HOST: {{ $labels.instance }} has been down for more than 2 minutes."
+  - alert: System becomes read-only
+    expr: node_filesystem_readonly{mountpoint="/"} == 1
+    for: 1m
+    labels:
+      severity: critital
+    annotations:
+      summary: "The instance {{ $labels.instance }} is system becomes read-only"
+      description: "BU: {{ $labels.department }} ENV: {{ $labels.environment }} CLUSTER: {{ $labels.clustername }} HOST: {{ $labels.instance }} is system becomes read-only for more than 1 minutes."
+  - alert: Network transmit or receive Usage Alert
+    expr: (irate(node_network_transmit_bytes_total{device!~"lo"}[1m]) / 1000) > 1000000
+    for: 1m
+    labels:
+      severity: warning
+    annotations:
+      summary: "{{$labels.instance}}: High Network request"
+      description: "BU: {{ $labels.department }} ENV: {{ $labels.environment }} CLUSTER: {{ $labels.clustername }} HOST: {{ $labels.instance }} Network traffic is high (current value is: {{ $value }}"
+  - alert: "Disk read I/O exceeds 30MB/s"
+    expr: irate(node_disk_read_bytes_total[1m]) > 30000000
+    for: 60s
+    labels:
+      severity: warning
+    annotations:
+      sumary: "{{ $labels.instance }} read I/O exceeds 30MB/s"
+      description: "BU: {{ $labels.department }} ENV: {{ $labels.environment }} CLUSTER: {{ $labels.clustername }} HOST: {{ $labels.instance }} write I/O exceeds 30MB/s, current value is:{{ $value }}"
+  - alert: "Disk write I/O exceeds 30MB/s"
+    expr: irate(node_disk_written_bytes_total[1m]) > 30000000
+    for: 60s
+    labels:
+      severity: warning
+    annotations:
+      sumary: "{{ $labels.instance }} write I/O exceeds 30MB/s"
+      description: "BU: {{ $labels.department }} ENV: {{ $labels.environment }} CLUSTER: {{ $labels.clustername }} HOST: {{ $labels.instance }} write I/O exceeds 30MB/s, current value is:{{ $value }}"
