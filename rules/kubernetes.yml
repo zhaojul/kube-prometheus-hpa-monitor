@@ -1,0 +1,133 @@
+groups:
+- name: Kubernetes        # exinclude dev qa env
+  rules:
+  - alert: PODDown
+    expr: kube_pod_status_phase{kubernetes_namespace="kube-monitor",phase="Unknown",namespace!="dev",namespace!="qa",namespace!="app",namespace!="consul"} == 1 or kube_pod_status_phase{kubernetes_namespace="kube-monitor",phase="Failed",namespace!="dev",namespace!="qa",namespace!="app",namespace!="consul"} == 1
+    #expr: kube_pod_status_phase{phase="Unknown"} == 1 or kube_pod_status_phase{phase="Failed"} == 1
+    for: 1m
+    labels:
+      instance: "POD:{{ $labels.pod }}"
+      severity: critital
+    annotations:
+      summary: "CLUSTER: {{ $labels.k8scluster }}  NAMESPACE: {{ $labels.namespace }}  POD: {{ $labels.pod }} down!"
+      description: "CLUSTER: {{ $labels.k8scluster }}  NAMESPACE: {{ $labels.namespace }}  POD: {{ $labels.pod }} down!"
+
+  - alert: PODPending
+    expr: kube_pod_status_phase{kubernetes_namespace="kube-monitor",phase="Pending"} == 1
+    for: 5m
+    labels:
+      instance: "POD:{{ $labels.pod }}"
+      severity: critital
+    annotations:
+      summary: "CLUSTER: {{ $labels.k8scluster }}  NAMESPACE: {{ $labels.namespace }}  POD: {{ $labels.pod }} has been in pending status for longer than 5 min"
+      description: "CLUSTER: {{ $labels.k8scluster }}  NAMESPACE: {{ $labels.namespace }}  POD: {{ $labels.pod }} has been in pending status for longer than 5 min"
+
+  - alert: ContainerWaiting
+    expr: sum by (department, k8scluster, namespace, container, pod, reason) (kube_pod_container_status_waiting_reason{reason!="ContainerCreating"}) > 0
+    for: 2m
+    labels:
+      instance: "Container:{{ $labels.container }}"
+      severity: critital
+    annotations:
+      summary: "CLUSTER: {{ $labels.k8scluster }}  NAMESPACE: {{ $labels.namespace }} SERVICE: {{ $labels.container }} POD: {{ $labels.pod }} has been in {{ $labels.reason }} status for longer than 2 min"
+      description: "CLUSTER: {{ $labels.k8scluster }}  NAMESPACE: {{ $labels.namespace }} SERVICE: {{ $labels.container }}  POD: {{ $labels.pod }} has been in {{ $labels.reason }} status for longer than 2 min"
+
+  - alert: PodMetricDown
+    expr: up{job="kubernetes-pods",kubernetes_namespace!="app",kubernetes_namespace!="dev",kubernetes_namespace!="qa"} == 0
+    for: 1m
+    labels:
+      instance: "POD:{{ $labels.kubernetes_pod_name }}"
+      severity: critital
+    annotations:
+      summary: "POD: {{ $labels.kubernetes_pod_name }} metric down!"
+      description: "CLUSTER: {{ $labels.k8scluster }}  NAMESPACE: {{ $labels.kubernetes_namespace }}  SERVICE: {{ $labels.app }} RELEASE: {{ $labels.release }} POD: {{ $labels.kubernetes_pod_name }} down!"
+
+  - alert: PODRestart
+    expr: changes(kube_pod_container_status_restarts_total{namespace!="app",namespace!="consul",namespace!="dev",namespace!="qa",kubernetes_namespace="kube-monitor",pod!~"analyzer.*"}[10m]) > 0
+    for: 1m
+    labels:
+      instance: "POD:{{ $labels.pod }}"
+      severity: error
+    annotations:
+      summary: "CLUSTER: {{ $labels.k8scluster }}  NAMESPACE: {{ $labels.namespace }}  SERVICE: {{ $labels.container }}  POD: {{ $labels.pod }} restart!"
+      description: "CLUSTER: {{ $labels.k8scluster }}  NAMESPACE: {{ $labels.namespace }}  SERVICE: {{ $labels.container }}  POD: {{ $labels.pod }} restart!"
+
+  - alert: Deployment at 0 Replicas
+    expr: sum(kube_deployment_status_replicas{pod_template_hash=""}) by (department,k8scluster,deployment,namespace)  < 1
+    for: 1m
+    labels:
+      instance: "Deployment: {{ $labels.deployment }}"
+      severity: critital
+    annotations:
+      summary: "CLUSTER: {{ $labels.k8scluster }}  NAMESPACE: {{ $labels.namespace }}  SERVICE: {{ $labels.deployment }} deployment without pod running!"
+      description: "CLUSTER: {{ $labels.k8scluster }}  NAMESPACE: {{ $labels.namespace }}  SERVICE: {{ $labels.deployment }} deployment without pod running!"
+
+  - alert: High CPU Usage of Container
+    expr: ((sum(irate(container_cpu_usage_seconds_total{image!="",container!="POD", namespace!="kube-system"}[30s])) by (department,k8scluster,namespace,container,pod_name) / sum(container_spec_cpu_quota{image!="",container!="POD", namespace!="kube-system"} / container_spec_cpu_period{image!="",container!="POD", namespace!="kube-system"}) by (department,k8scluster,namespace,container,pod_name) ) * 100)  > 80
+    for: 5m
+    labels:
+      instance: "SERVICE: {{ $labels.container }} POD: {{$labels.pod}}"
+      severity: error
+    annotations:
+      summary: "CLUSTER: {{ $labels.k8scluster }}  NAMESPACE: {{ $labels.namespace }}  SERVICE: {{ $labels.container }}  POD: {{$labels.pod }} is using more than 80% of CPU Limit"
+      description: "CLUSTER: {{ $labels.k8scluster }}  NAMESPACE: {{ $labels.namespace }}  SERVICE: {{ $labels.container }}  POD: {{$labels.pod }} is using more than 80% of CPU Limit"
+
+  - alert: High Memory Usage of Container
+    expr: ((( sum(container_memory_usage_bytes{image!="",container!="POD",namespace="datadog",namespace="prometheus"}) by (department,k8scluster,namespace,container,pod_name)  / sum(container_spec_memory_limit_bytes{image!="",container!="POD",namespace="datadog",namespace="prometheus"}) by (department,k8scluster,namespace,container,pod_name) ) * 100 ) < +Inf ) > 85
+    for: 5m
+    labels:
+      instance: "SERVICE: {{ $labels.container }} POD: {{$labels.pod }}"
+      severity: error
+    annotations:
+      summary: "CLUSTER: {{ $labels.k8scluster }}  NAMESPACE: {{ $labels.namespace }}  SERVICE: {{ $labels.container }}  POD: {{$labels.pod }} is using more than 85% of Memory Limit"
+      description: "CLUSTER: {{ $labels.k8scluster }}  NAMESPACE: {{ $labels.namespace }}  SERVICE: {{ $labels.container }}  POD: {{$labels.pod }} is using more than 85% of Memory Limit"
+
+  - alert: NODEUnschedulable
+    expr: kube_node_spec_unschedulable == 1
+    for: 5m
+    labels:
+      severity: critital
+      instance: "CLUSTER:{{ $labels.k8scluster}} NODE:{{ $labels.node }}"
+    annotations:
+      summary: "CLUSTER:{{ $labels.k8scluster}}  NODE:{{ $labels.node }} unschedulable!"
+      description: "CLUSTER:{{ $labels.k8scluster}}  NODE:{{ $labels.node }} unschedulable!"
+
+  - alert: NODE Mem Usage Alert
+    expr: (node_memory_MemTotal - node_memory_MemAvailable)/node_memory_MemTotal > 0.75
+    for: 5m
+    labels:
+      severity: warning
+      instance: "CLUSTER:{{ $labels.k8scluster}} NODE:{{ $labels.node }}"
+    annotations:
+      summary: "{{ $labels.instance }} MEM usage above 75% (current value: {{ $value }}), pods may be evicted!"
+      description: "{{ $labels.instance }} MEM usage above 75% (current value: {{ $value }}), pods may be evicted!"
+
+  - alert: NODEStatusError
+    expr: kube_node_status_condition{condition="Ready", status!="true"} == 1
+    for: 5m
+    labels:
+      instance: "CLUSTER:{{ $labels.k8scluster}}  NODE:{{ $labels.node }}"
+      severity: critital
+    annotations:
+      summary: "CLUSTER:{{ $labels.k8scluster}}  NODE:{{ $labels.node }} StatusError!"
+      description: "CLUSTER:{{ $labels.k8scluster}}  NODE:{{ $labels.node }} StatusError!"
+
+  - alert: DaemonsetUnavailable
+    expr: kube_daemonset_status_number_unavailable{namespace!="consul"} > 0
+    for: 5m
+    labels:
+      instance: "CLUSTER:{{ $labels.k8scluster}} Daemonset: {{ $labels.daemonset }}"
+      severity: critital
+    annotations:
+      summary: "CLUSTER:{{ $labels.k8scluster}}  ENV:{{ $labels.namespace }}  Daemonset:{{ $labels.daemonset }} Unavailable!"
+      description: "CLUSTER:{{ $labels.k8scluster}}  ENV:{{ $labels.namespace }}  Daemonset:{{ $labels.daemonset }} Unavailable!"
+
+  - alert: JobFailed
+    expr: kube_job_status_failed == 1
+    for: 5m
+    labels:
+      severity: critital
+      instance: "CLUSTER:{{ $labels.k8scluster}} Job: {{ $labels.exported_job }}"
+    annotations:
+      summary: "CLUSTER:{{ $labels.k8scluster}}  ENV:{{ $labels.namespace }}  Job:{{ $labels.exported_job }} Failed!"
+      description: "CLUSTER:{{ $labels.k8scluster}}  ENV:{{ $labels.namespace }}  Job:{{ $labels.exported_job }} Failed!"
