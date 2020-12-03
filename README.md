@@ -11,6 +11,7 @@ This Repo has the following two functions:
 
 ```
 kubectl apply -f ./namespaces.yaml
+kubectl apply -f ./node-exporter.yaml
 kubectl apply -f ./metrics-server/0.3.6/ 
 kubectl apply -f ./kube-state-metrics/
 kubectl aply -f ./prometheus/
