@@ -1,0 +1,11 @@
+groups:
+- name: BlackBoxAlert
+  rules:
+  - alert: URL Response status not 2xx
+    expr: probe_success == 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Instance {{ $labels.instance }} "
+      description: "Instance {{ $labels.instance }} response status not 2xx"
