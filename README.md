@@ -26,7 +26,7 @@ Customize monitoring indicators through Prometheus adaptor:
 https://github.com/stefanprodan/k8s-prom-hpa
 
 
-How to depoy it:
+**How to depoy it:**
 
 We still need to perform the steps of deploying prometheus above, and perform the following steps after completion:
 
